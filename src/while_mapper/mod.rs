@@ -38,27 +38,34 @@ impl EventSystem for WhileMapper {
     ) -> EventBuffer {
         let mut event_buffer = EventBuffer::default();
 
-        match (get_mut_active_while_event_registry(program_registry), get_while_registry(program_registry)) {
-            (Ok(Ok(Ok(mut active_loops_registry))), Ok(Ok(Ok(while_registry)))) => {
-                let triggered_events = while_registry.as_ref().iter().filter(|while_event| while_event.triggered(current_events)).cloned();
+        let triggered_events = match get_while_registry(program_registry) {
+            Ok(Ok(Ok(while_registry))) => {
+                Some(while_registry.as_ref().iter().filter(|while_event| while_event.triggered(current_events)).cloned().collect::<Vec<_>>())
+            },
+            _ => None
+        };
 
-                active_loops_registry.as_mut().extend(triggered_events);
-
-                active_loops_registry.as_mut().retain(|active_loop| {
-                    if active_loop.continues(current_events) {
-                        if let Some(new_event) = &active_loop.iter {
-                            event_buffer.insert(new_event.clone());
+        match get_mut_active_while_event_registry(program_registry) {
+            Ok(Ok(Ok(mut active_while_event_registry))) => {
+                if let Some(triggered_events) = triggered_events {
+                    let active_while_event_registry = active_while_event_registry.as_mut();
+                    active_while_event_registry.extend(triggered_events);
+                    active_while_event_registry.retain(|active_loop| {
+                        if active_loop.continues(current_events) {
+                            if let Some(new_event) = &active_loop.iter {
+                                event_buffer.insert(new_event.clone());
+                            }
+            
+                            true
+                        } else {
+                            if let Some(new_event) = &active_loop.end {
+                                event_buffer.insert(new_event.clone());
+                            }
+            
+                            false
                         }
-
-                        true
-                    } else {
-                        if let Some(new_event) = &active_loop.end {
-                            event_buffer.insert(new_event.clone());
-                        }
-
-                        false
-                    }
-                });
+                    });
+                }                
             },
             _ => ()
         }
