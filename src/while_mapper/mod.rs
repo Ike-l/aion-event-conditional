@@ -31,7 +31,11 @@ pub mod while_event;
 pub struct WhileMapper;
 
 impl EventSystem for WhileMapper {
-    fn execute(program_registry: &Arc<ProgramRegistry>, current_events: &EventBuffer) -> EventBuffer {
+    fn execute(
+        program_registry: &Arc<ProgramRegistry>, 
+        current_events: &EventBuffer,
+        _event_history: &EventBuffer
+    ) -> EventBuffer {
         let mut event_buffer = EventBuffer::default();
 
         match (get_mut_active_while_event_registry(program_registry), get_while_registry(program_registry)) {
