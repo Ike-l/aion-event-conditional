@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use aion_event::prelude::{EventSystem, EventBuffer};
+use aion_event::prelude::{EventSystem, EventBuffer, EventHistory};
 use aion_program::prelude::{ProgramRegistry};
 
 use crate::prelude::{get_while_registry, get_mut_active_while_event_registry};
@@ -34,7 +34,7 @@ impl EventSystem for WhileMapper {
     fn execute(
         program_registry: &Arc<ProgramRegistry>, 
         current_events: &EventBuffer,
-        _event_history: &EventBuffer
+        _event_history: &EventHistory
     ) -> EventBuffer {
         let mut event_buffer = EventBuffer::default();
 
