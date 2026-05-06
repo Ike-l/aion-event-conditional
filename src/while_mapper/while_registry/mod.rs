@@ -27,7 +27,7 @@ pub fn get_while_registry<'a>(
     program_registry.resolve_with_insert::<Shared<WhileRegister>>(
         vec![WHILE_REGISTRY_ACCESS_BUILDER], 
         ProgramRegistryResolveWithInsert { 
-            resource: Some(Resource::new(WhileRegister::default())), 
+            resource: Some(Box::new(|| Resource::new(WhileRegister::default()))), 
             resource_id: Some(WHILE_REGISTRY_RESOURCE_ID), 
             ..Default::default()
         }

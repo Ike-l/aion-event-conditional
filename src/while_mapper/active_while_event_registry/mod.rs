@@ -27,7 +27,7 @@ pub fn get_mut_active_while_event_registry<'a>(
     program_registry.resolve_with_insert::<Unique<ActiveWhileEventRegistry>>(
         vec![ACTIVE_WHILE_EVENT_REGISTRY_ACCESS_BUILDER], 
         ProgramRegistryResolveWithInsert { 
-            resource: Some(Resource::new(ActiveWhileEventRegistry::default())), 
+            resource: Some(Box::new(|| Resource::new(ActiveWhileEventRegistry::default()))), 
             resource_id: Some(ACTIVE_WHILE_EVENT_REGISTRY_RESOURCE_ID), 
             ..Default::default()
         }
