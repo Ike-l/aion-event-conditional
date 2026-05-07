@@ -31,6 +31,6 @@ pub fn get_mut_active_while_event_registry<'a>(
             resource_id: Some(ACTIVE_WHILE_EVENT_REGISTRY_RESOURCE_ID), 
             ..Default::default()
         }
-    // is only ever None if resource_id is None
+    // is only ever None if resource_id or resource is None
     ).unwrap()
 }
