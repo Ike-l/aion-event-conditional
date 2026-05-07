@@ -12,7 +12,7 @@ pub type ActiveWhileEventRegistry = HashSet<WhileEvent>;
 
 pub const ACTIVE_WHILE_EVENT_REGISTRY_RESOURCE_ID: ResourceId = ResourceId::StaticLabel("EventConditional ActiveWhileEventRegistry");
 
-pub const ACTIVE_WHILE_EVENT_REGISTRY_ACCESS_BUILDER: AccessBuilder<'static> = AccessBuilder {
+pub const ACTIVE_WHILE_EVENT_REGISTRY_ACCESS_BUILDER: AccessBuilder = AccessBuilder {
     user_details: None,
     program_id: None,
     program_password: None,

@@ -12,7 +12,7 @@ pub type WhileRegister = HashSet<WhileEvent>;
 
 pub const WHILE_REGISTRY_RESOURCE_ID: ResourceId = ResourceId::StaticLabel("EventConditional WhileRegistry");
 
-pub const WHILE_REGISTRY_ACCESS_BUILDER: AccessBuilder<'static> = AccessBuilder {
+pub const WHILE_REGISTRY_ACCESS_BUILDER: AccessBuilder = AccessBuilder {
     user_details: None,
     program_id: None,
     program_password: None,
