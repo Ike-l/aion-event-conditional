@@ -32,6 +32,7 @@ pub struct WhileMapper;
 
 impl EventSystem for WhileMapper {
     fn execute(
+        &self,
         program_registry: &Arc<ProgramRegistry>, 
         current_events: &EventBuffer,
         _event_history: &EventHistory
