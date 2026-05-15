@@ -7,3 +7,5 @@ edition = "2024"
 aion-event = { path = "../../aion-event" }
 aion-program = { path = "../../aion-program" }
 aion-processor = { path = "../../aion-processor" }
+aion-ecs = { path = "../../aion-ecs" }
+hecs = "0.11.0"

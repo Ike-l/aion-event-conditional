@@ -1,12 +1,12 @@
 use std::{collections::HashSet, sync::Arc};
 
+use aion_ecs::prelude::{Query, UNIQUE_WORLD_ACCESS_BUILDER, WORLD_RESOURCE_ID, World};
 use aion_event::prelude::{EventSystem, EventBuffer, EventHistory};
-use aion_program::prelude::{ProgramRegistry};
+use aion_program::prelude::{ProgramRegistry, ProgramRegistryResolveWithInsert, Resource, Unique};
+use hecs::{Entity, With};
 
-use crate::prelude::{get_while_registry, get_mut_active_while_event_registry};
+use crate::prelude::WhileEvent;
 
-pub mod while_registry;
-pub mod active_while_event_registry;
 pub mod while_event;
 
 /// # While Mapper
@@ -30,6 +30,8 @@ pub mod while_event;
 /// Holds all `Active While Event`s
 pub struct WhileMapper;
 
+struct ActiveWhileEventFlag;
+
 impl EventSystem for WhileMapper {
     fn execute(
         &self,
@@ -39,37 +41,66 @@ impl EventSystem for WhileMapper {
     ) -> EventBuffer {
         let mut event_buffer = EventBuffer::default();
 
-        let triggered_events = match get_while_registry(program_registry) {
-            Ok(Ok(Ok(while_registry))) => {
-                Some(while_registry.as_ref().iter().filter(|while_event| while_event.triggered(current_events)).cloned().collect::<HashSet<_>>())
-            },
-            _ => None
-        };
-
-        match get_mut_active_while_event_registry(program_registry) {
-            Ok(Ok(Ok(mut active_while_event_registry))) => {
-                let active_while_event_registry = active_while_event_registry.as_mut();
-                if let Some(triggered_events) = triggered_events {
-                    active_while_event_registry.extend(triggered_events);
-                }
-
-                active_while_event_registry.retain(|active_loop| {
-                    if active_loop.continues(current_events) {
-                        if let Some(new_event) = &active_loop.iter {
-                            event_buffer.insert(new_event.clone());
-                        }
-        
-                        true
-                    } else {
-                        if let Some(new_event) = &active_loop.end {
-                            event_buffer.insert(new_event.clone());
-                        }
-        
-                        false
+        let mut triggered_while_events = HashSet::new();
+        {
+            let while_events = program_registry.resolve::<Query<(Entity, &WhileEvent)>>(vec![]);
+            if let Ok(Ok(mut while_events)) = while_events {
+                for (entity, while_event) in while_events.borrow().iter() {
+                    if while_event.triggered(current_events) {
+                        triggered_while_events.insert(entity);
                     }
-                });
-            },
-            _ => ()
+                }
+            }
+        }
+
+        {
+            let world = program_registry.resolve_with_insert::<Unique<World>>(vec![UNIQUE_WORLD_ACCESS_BUILDER], ProgramRegistryResolveWithInsert {
+                resource: Some(Box::new(|| Resource::new(World::default()))),
+                resource_id: Some(WORLD_RESOURCE_ID),
+                ..Default::default()
+            }).expect("Resource and ResourceId are Some");
+
+            if let Ok(Ok(Ok(mut world))) = world {
+                for entity in triggered_while_events {
+                    let _ = world.as_mut().insert(entity, (ActiveWhileEventFlag,));
+                }
+            }
+        }
+
+        let mut dead_active_while_events = HashSet::new();
+        {
+            let active_while_events = program_registry.resolve::<Query<With<(Entity, &WhileEvent), &ActiveWhileEventFlag>>>(vec![]);
+            if let Ok(Ok(mut active_while_events)) = active_while_events {
+                for (entity, active_while_event) in active_while_events.borrow().iter() {
+                    if active_while_event.continues(current_events) {
+                        if let Some(new_event) = &active_while_event.iter {
+                            event_buffer.insert(new_event.clone());
+                        }
+                    } else {
+                        if let Some(final_event) = &active_while_event.end {
+                            event_buffer.insert(final_event.clone());
+                        }
+
+                        dead_active_while_events.insert(entity);
+                    }                
+                }
+            }
+        }
+
+        {
+            let world = program_registry.resolve_with_insert::<Unique<World>>(vec![UNIQUE_WORLD_ACCESS_BUILDER], ProgramRegistryResolveWithInsert {
+                resource: Some(Box::new(|| Resource::new(World::default()))),
+                resource_id: Some(WORLD_RESOURCE_ID),
+                ..Default::default()
+            }).expect("Resource and ResourceId are Some");
+    
+            {
+                if let Ok(Ok(Ok(mut world))) = world {
+                    for dead_active_while_event in dead_active_while_events {                    
+                        let _ = world.as_mut().remove::<(ActiveWhileEventFlag,)>(dead_active_while_event);
+                    }
+                }
+            }
         }
 
         event_buffer
