@@ -1,7 +1,6 @@
 use std::{collections::HashSet, sync::Arc};
 
-use aion_program::prelude::{Resource, ProgramRegistryResolveWithInsert, AccessBuilder, ResourceId, ProgramRegistry, ProgramRegistryReplaceResourceError, ResolveResourceError, AccessSubmissionError};
-use aion_processor::prelude::{Shared};
+use aion_program::prelude::{Shared, Resource, ProgramRegistryResolveWithInsert, AccessBuilder, ResourceId, ProgramRegistry, ProgramRegistryReplaceResourceError, ResolveResourceError, AccessSubmissionError};
 
 use crate::prelude::{WhileEvent};
 
