@@ -1,8 +1,8 @@
-use std::{collections::HashSet, sync::Arc};
+use std::{any::TypeId, collections::HashSet, sync::Arc};
 
-use aion_ecs::prelude::{Query, UNIQUE_WORLD_ACCESS_BUILDER, WORLD_RESOURCE_ID, World};
+use aion_ecs::prelude::{Query, World};
 use aion_event::prelude::{EventSystem, EventBuffer, EventHistory};
-use aion_program::prelude::{ProgramRegistry, ProgramRegistryResolveWithInsert, Resource, Unique};
+use aion_program::prelude::{ProgramRegistry, ProgramRegistryResolveWithInsert, Resource, ResourceId, Unique};
 use hecs::{Entity, With};
 
 use crate::prelude::WhileEvent;
@@ -43,9 +43,9 @@ impl EventSystem for WhileMapper {
 
         let mut triggered_while_events = HashSet::new();
         {
-            let while_events = program_registry.resolve::<Query<(Entity, &WhileEvent)>>(vec![]);
-            if let Ok(Ok(mut while_events)) = while_events {
-                for (entity, while_event) in while_events.borrow().iter() {
+            let while_events = program_registry.resolve::<Query<(Entity, &WhileEvent)>>(None, vec![]);
+            if let Ok(Ok(while_events)) = while_events {
+                for (entity, while_event) in while_events.query().iter() {
                     if while_event.triggered(current_events) {
                         triggered_while_events.insert(entity);
                     }
@@ -54,9 +54,9 @@ impl EventSystem for WhileMapper {
         }
 
         {
-            let world = program_registry.resolve_with_insert::<Unique<World>>(vec![UNIQUE_WORLD_ACCESS_BUILDER], ProgramRegistryResolveWithInsert {
+            let world = program_registry.resolve_with_insert::<Unique<World>>(None, vec![], ProgramRegistryResolveWithInsert {
                 resource: Some(Box::new(|| Resource::new(World::default()))),
-                resource_id: Some(WORLD_RESOURCE_ID),
+                resource_id: Some(ResourceId::TypeId(TypeId::of::<World>())),
                 ..Default::default()
             }).expect("Resource and ResourceId are Some");
 
@@ -69,9 +69,9 @@ impl EventSystem for WhileMapper {
 
         let mut dead_active_while_events = HashSet::new();
         {
-            let active_while_events = program_registry.resolve::<Query<With<(Entity, &WhileEvent), &ActiveWhileEventFlag>>>(vec![]);
-            if let Ok(Ok(mut active_while_events)) = active_while_events {
-                for (entity, active_while_event) in active_while_events.borrow().iter() {
+            let active_while_events = program_registry.resolve::<Query<With<(Entity, &WhileEvent), &ActiveWhileEventFlag>>>(None, vec![]);
+            if let Ok(Ok(active_while_events)) = active_while_events {
+                for (entity, active_while_event) in active_while_events.query().iter() {
                     if active_while_event.continues(current_events) {
                         if let Some(new_event) = &active_while_event.iter {
                             event_buffer.insert(new_event.clone());
@@ -88,9 +88,9 @@ impl EventSystem for WhileMapper {
         }
 
         {
-            let world = program_registry.resolve_with_insert::<Unique<World>>(vec![UNIQUE_WORLD_ACCESS_BUILDER], ProgramRegistryResolveWithInsert {
+            let world = program_registry.resolve_with_insert::<Unique<World>>(None, vec![], ProgramRegistryResolveWithInsert {
                 resource: Some(Box::new(|| Resource::new(World::default()))),
-                resource_id: Some(WORLD_RESOURCE_ID),
+                resource_id: Some(ResourceId::TypeId(TypeId::of::<World>())),
                 ..Default::default()
             }).expect("Resource and ResourceId are Some");
     
