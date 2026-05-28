@@ -1,9 +1,10 @@
-use std::{any::TypeId, collections::HashSet, sync::Arc};
+use std::{collections::HashSet, sync::Arc};
 
 use aion_ecs::prelude::{Query, World};
 use aion_event::prelude::{EventSystem, EventBuffer, EventHistory};
-use aion_program::prelude::{ProgramRegistry, ProgramRegistryResolveWithInsert, Resource, ResourceId, Unique};
+use aion_program::prelude::{ProgramRegistry, Shared, Unique};
 use hecs::{Entity, With};
+use tokio::runtime::Runtime;
 
 use crate::prelude::WhileEvent;
 
@@ -42,9 +43,17 @@ impl EventSystem for WhileMapper {
         let mut event_buffer = EventBuffer::default();
 
         let mut triggered_while_events = HashSet::new();
+
+        let runtime = program_registry.resolve::<Shared<Runtime>>(None, vec![]);
+        let runtime = match runtime {
+            Ok(runtime) => Some(runtime),
+            _ => None
+        };
+
         {
-            let while_events = program_registry.resolve::<Query<(Entity, &WhileEvent)>>(None, vec![]);
-            if let Ok(Ok(while_events)) = while_events {
+            let while_events = program_registry.resolve_simple_either::<Query<(Entity, &WhileEvent)>>(runtime.as_deref());
+
+            if let Ok(while_events) = while_events {
                 for (entity, while_event) in while_events.query().iter() {
                     if while_event.triggered(current_events) {
                         triggered_while_events.insert(entity);
@@ -54,13 +63,9 @@ impl EventSystem for WhileMapper {
         }
 
         {
-            let world = program_registry.resolve_with_insert::<Unique<World>>(None, vec![], ProgramRegistryResolveWithInsert {
-                resource: Some(Box::new(|| Resource::new(World::default()))),
-                resource_id: Some(ResourceId::TypeId(TypeId::of::<World>())),
-                ..Default::default()
-            }).expect("Resource and ResourceId are Some");
+            let world = program_registry.resolve_simple_either::<Unique<World>>(runtime.as_deref());
 
-            if let Ok(Ok(Ok(mut world))) = world {
+            if let Ok(mut world) = world {
                 for entity in triggered_while_events {
                     let _ = world.as_mut().insert(entity, (ActiveWhileEventFlag,));
                 }
@@ -69,8 +74,8 @@ impl EventSystem for WhileMapper {
 
         let mut dead_active_while_events = HashSet::new();
         {
-            let active_while_events = program_registry.resolve::<Query<With<(Entity, &WhileEvent), &ActiveWhileEventFlag>>>(None, vec![]);
-            if let Ok(Ok(active_while_events)) = active_while_events {
+            let active_while_events = program_registry.resolve_simple_either::<Query<With<(Entity, &WhileEvent), &ActiveWhileEventFlag>>>(runtime.as_deref());
+            if let Ok(active_while_events) = active_while_events {
                 for (entity, active_while_event) in active_while_events.query().iter() {
                     if active_while_event.continues(current_events) {
                         if let Some(new_event) = &active_while_event.iter {
@@ -88,14 +93,10 @@ impl EventSystem for WhileMapper {
         }
 
         {
-            let world = program_registry.resolve_with_insert::<Unique<World>>(None, vec![], ProgramRegistryResolveWithInsert {
-                resource: Some(Box::new(|| Resource::new(World::default()))),
-                resource_id: Some(ResourceId::TypeId(TypeId::of::<World>())),
-                ..Default::default()
-            }).expect("Resource and ResourceId are Some");
-    
+            let world = program_registry.resolve_simple_either::<Unique<World>>(runtime.as_deref());
+
             {
-                if let Ok(Ok(Ok(mut world))) = world {
+                if let Ok(mut world) = world {
                     for dead_active_while_event in dead_active_while_events {                    
                         let _ = world.as_mut().remove::<(ActiveWhileEventFlag,)>(dead_active_while_event);
                     }
